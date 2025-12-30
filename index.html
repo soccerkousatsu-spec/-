@@ -24,11 +24,18 @@
         }
 
         /* --- 基本スタイル --- */
+         /* --- 基本スタイル --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Yu Gothic", sans-serif;
             margin: 0; padding: 0;
             background-color: var(--bg-color); color: var(--text-main);
-            height: 100vh; display: flex; flex-direction: column;
+            
+            /* ▼▼▼ ここを変更（Safari対応） ▼▼▼ */
+            height: 100vh;      /* 古いブラウザ用 */
+            height: 100dvh;     /* 新しいスマホブラウザ用（バーを除いた高さになる） */
+            /* ▲▲▲ ここまで ▲▲▲ */
+            
+            display: flex; flex-direction: column;
             overflow: hidden; -webkit-font-smoothing: antialiased;
         }
 
