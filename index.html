@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ガチで勝ちに行く</title>
     <style>
         /* --- デザイン定義 (カラーパレット) --- */
@@ -24,19 +24,21 @@
         }
 
         /* --- 基本スタイル --- */
-         /* --- 基本スタイル --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Yu Gothic", sans-serif;
             margin: 0; padding: 0;
             background-color: var(--bg-color); color: var(--text-main);
             
-            /* ▼▼▼ ここを変更（Safari対応） ▼▼▼ */
-            height: 100vh;      /* 古いブラウザ用 */
-            height: 100dvh;     /* 新しいスマホブラウザ用（バーを除いた高さになる） */
-            /* ▲▲▲ ここまで ▲▲▲ */
+            /* Safari対応の高さ指定 */
+            height: 100vh;
+            height: 100dvh;
             
             display: flex; flex-direction: column;
             overflow: hidden; -webkit-font-smoothing: antialiased;
+            
+            /* iPhoneのノッチ対応 */
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
 
         /* 画面レイアウト */
@@ -54,12 +56,11 @@
             background-color: #FFFFFF;
             display: flex; align-items: center; justify-content: center;
             z-index: 9999;
-            transition: opacity 0.5s ease-out; /* ふわっと消えるアニメーション */
+            transition: opacity 0.5s ease-out;
         }
         #splash-screen.fade-out { opacity: 0; pointer-events: none; }
         .splash-logo {
-            width: 180px; /* ロゴの大きさ（小さめ） */
-            height: auto;
+            width: 180px; height: auto;
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
@@ -169,13 +170,30 @@
         }
         .controls-overlay {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(255,255,255,0.98); padding: 24px 24px 40px 24px;
+            background: rgba(255,255,255,0.98); 
+            
+            padding-top: 10px; /* ハンドル用のスペース */
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            padding-left: calc(24px + env(safe-area-inset-left));
+            padding-right: calc(24px + env(safe-area-inset-right));
+            
             border-top-left-radius: 20px; border-top-right-radius: 20px;
-            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            transform: translateY(100%); 
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            
             display: flex; flex-direction: column; gap: 16px; z-index: 100;
             box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+            
+            max-height: 80dvh; 
+            overflow-y: auto;
         }
         .controls-overlay.show { transform: translateY(0); }
+        
+        /* スワイプ用のハンドルデザイン */
+        .drag-handle {
+            width: 40px; height: 5px; background: #ddd; border-radius: 3px;
+            margin: 0 auto 10px auto; flex-shrink: 0;
+        }
         
         .preset-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
         .preset-item { 
@@ -223,52 +241,19 @@
             position: fixed; 
             top: 50%; left: 50%; 
             transform: translate(-50%, -50%);
-            
-            /* 背景・枠を削除 */
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            
-            /* 文字のデザイン */
-            color: var(--color-green);
-            font-size: 4rem; /* 文字を大きく */
-            font-weight: 900;
-            font-style: italic; /* 勢いをつける */
-            white-space: nowrap;
-            
-            /* 文字の縁取り（白）をつけて読みやすく */
-            text-shadow: 
-                3px 3px 0 #fff, -3px -3px 0 #fff,
-                3px -3px 0 #fff, -3px 3px 0 #fff,
-                0 5px 15px rgba(0,0,0,0.1);
-
-            pointer-events: none; 
-            z-index: 9999;
-            opacity: 0; /* 普段は消しておく */
+            background: transparent; border: none; box-shadow: none;
+            color: var(--color-green); font-size: 4rem; font-weight: 900; font-style: italic; white-space: nowrap;
+            text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 0 5px 15px rgba(0,0,0,0.1);
+            pointer-events: none; z-index: 9999; opacity: 0;
         }
 
         /* アニメーションの定義（その場でふわっと） */
         @keyframes popUpSoft {
-            0% { 
-                opacity: 0; 
-                transform: translate(-50%, -50%) scale(0.8); /* 少し小さい状態から */
-            }
-            20% { 
-                opacity: 1; 
-                transform: translate(-50%, -50%) scale(1.0); /* パッと現れる */
-            }
-            100% { 
-                opacity: 0; 
-                transform: translate(-50%, -50%) scale(1.2); /* 上には動かず、少し拡大しながら消える */
-            }
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
         }
-
-        #nice-popup.pop { 
-            /* 時間を少しゆっくり(1秒)にして余韻を残す */
-            animation: popUpSoft 1.0s ease-out forwards; 
-        }
-
-
+        #nice-popup.pop { animation: popUpSoft 1.0s ease-out forwards; }
     </style>
 </head>
 <body>
@@ -305,7 +290,6 @@
 
     <div id="settings-screen" class="screen">
         <h2>アプリ設定</h2>
-        
         <button id="settings-back-btn" class="btn-outline" style="margin-bottom:20px;" onclick="returnFromSettings()">← 戻る</button>
 
         <div style="margin-bottom:30px;">
@@ -326,7 +310,6 @@
             <div class="setting-input-group">
                 <label class="setting-label">新しいプリセットを追加</label>
                 <textarea id="new-preset-text" placeholder="表示させたい言葉（改行OK）"></textarea>
-                
                 <div class="color-picker-row">
                     <div style="display:flex; align-items:center; gap:5px;">
                         <label style="font-size:0.8em;">背景:</label>
@@ -337,19 +320,15 @@
                         <input type="color" id="new-preset-color" value="#ffffff" oninput="updatePreview()">
                     </div>
                 </div>
-                
                 <div style="margin-top:15px;">
                     <label style="font-size:0.8em;">文字サイズ: <span id="size-preview-val">15</span>% (vmin)</label>
                     <input type="range" id="new-preset-size" min="5" max="50" value="15" oninput="updatePreview()">
                 </div>
-
                 <div id="preview-box" style="margin-top:15px; padding:20px; text-align:center; font-weight:900; background:#000; color:#fff; border-radius:8px; border:1px solid #ccc;">
                     プレビュー
                 </div>
-
                 <button class="big-btn" style="margin-top:15px; font-size:1em; padding:12px;" onclick="addNewPreset()">追加する</button>
             </div>
-            
             <label style="font-size:0.8em; color:var(--text-sub); display:block; margin-bottom:10px;">登録済みプリセット</label>
             <div id="settings-preset-list" class="list-container"></div>
         </div>
@@ -362,15 +341,12 @@
 
         <div style="margin-bottom:30px; border-top:1px solid var(--border-color); padding-top:20px;">
             <h3 style="font-size:1em; color:var(--text-sub); margin-bottom:12px;">データのバックアップ</h3>
-            <div style="font-size:0.8em; color:var(--text-sub); margin-bottom:10px;">
-                機種変更の時や、定期的なバックアップに。
-            </div>
+            <div style="font-size:0.8em; color:var(--text-sub); margin-bottom:10px;">機種変更の時や、定期的なバックアップに。</div>
             <button class="btn-outline" onclick="exportDataFile()">📤 データをファイルに保存</button>
             <div style="height:10px;"></div>
             <button class="btn-outline" onclick="triggerImport()" style="background:#fff4f4; border-color:#edd;">📥 ファイルから復元</button>
             <input type="file" id="import-file-input" style="display:none;" onchange="importDataFile(this)">
         </div>
-        
     </div>
 
     <div id="game-select-screen" class="screen">
@@ -385,7 +361,6 @@
             <div style="text-align:center;">
                 <div style="font-size:0.9em; color:var(--text-sub); margin-bottom:10px;">NOW PLAYING</div>
                 <div id="current-game-title" class="hub-title" style="margin-bottom:15px;">GAME</div>
-                
                 <div id="session-stats-box" style="background:#fff; padding:15px; border-radius:12px; box-shadow:var(--shadow); margin-bottom:20px; border:1px solid var(--border-color);">
                     <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
                         <span style="font-size:0.8em; color:var(--text-sub); font-weight:bold;">今日のメンタル勝率</span>
@@ -400,10 +375,8 @@
                     </div>
                 </div>
             </div>
-
             <button id="play-calm-btn" class="btn-green" style="height:80px;" onclick="recordCalm()">落ち着いてた</button>
             <button id="play-tilt-btn" class="btn-red" style="height:80px;" onclick="goToTiltReason()">ティルトした</button>
-            
             <button class="btn-blue" style="height:80px; margin-top:10px;" onclick="goToDisplayMode()">画面に文字を表示</button>
         </div>
         <button class="btn-outline" onclick="showScreen('home-screen')">終了してホームへ</button>
@@ -426,6 +399,7 @@
         </div>
         <div id="display-controls" class="controls-overlay">
             
+            <div class="drag-handle"></div>
             <div style="display:flex; gap:10px; margin-bottom:20px;">
                 <button id="overlay-calm-btn" class="btn-green" style="flex:1; padding:20px 10px; font-size:1em; margin:0;" onclick="recordCalm()">落ち着いてた</button>
                 <button id="overlay-tilt-btn" class="btn-red" style="flex:1; padding:20px 10px; font-size:1em; margin:0;" onclick="goToTiltReason(true)">ティルト</button>
@@ -439,6 +413,8 @@
             <div id="display-preset-list" class="preset-list"></div>
             
             <button class="btn-outline" style="margin-top:10px;" onclick="goToSettingsFromDisplay()">⚙️ プリセット設定・編集</button>
+
+            <button onclick="toggleFullScreen()" class="btn-outline" style="margin-top:10px; background:#fff; color:#333; border:1px solid #ccc;">⛶ 全画面モード</button>
             
             <button onclick="exitDisplayMode()" class="btn-outline" style="margin-top:10px; border:none; background:#eee;">プレイ画面に戻る</button>
         </div>
@@ -446,7 +422,6 @@
 
     <div id="history-screen" class="screen">
         <h2>分析と記録</h2>
-        
         <div class="filter-card">
             <div class="filter-row">
                 <div style="flex:1;">
@@ -468,7 +443,6 @@
                 </select>
             </div>
         </div>
-
         <div id="stats-container">
             <div class="stats-card">
                 <div class="stats-header">メンタル勝率</div>
@@ -483,7 +457,6 @@
                 <div id="stats-reasons-list"><div style="color:var(--text-sub); text-align:center; padding:10px;">データなし</div></div>
             </div>
         </div>
-        
         <h3 style="font-size:1em; color:var(--text-sub); margin:30px 0 10px 0;">記録一覧</h3>
         <div id="history-list"></div>
         <button onclick="showScreen('home-screen')" class="btn-outline" style="margin-top:20px;">戻る</button>
@@ -493,9 +466,7 @@
     <div id="nice-popup">NICE!</div>
 
     <script>
-        // --- データ初期値 ---
         const DEFAULT_REASONS = ["焦った", "他人の目を気にした", "目先の利益に囚われた", "感情的になった"];
-        
         const DEFAULT_PRESETS = [
             { text: "ガチで\n勝ちに行く", bg: "#111111", color: "#ffffff", size: "15" },
             { text: "落ち着く", bg: "#7A9D54", color: "#ffffff", size: "15" },
@@ -507,19 +478,18 @@
         let wakeLock = null;
         let calmLabel = "落ち着いてた";
         let tiltLabel = "落ち着けなかった";
-        
         let viewDate = new Date();
-        
         let isFromDisplayMode = false;
         let returnToDisplay = false;
 
         window.onload = function() {
-            // ▼ ロゴの表示（スプラッシュ画面）処理 ▼
             setTimeout(() => {
                 const splash = document.getElementById('splash-screen');
                 splash.classList.add('fade-out');
-                setTimeout(() => splash.style.display = 'none', 500); // 0.5秒後に完全非表示
-            }, 1500); // 1.5秒間表示する
+                setTimeout(() => splash.style.display = 'none', 500); 
+            }, 1500);
+
+            setupSwipeToClose(); // ★スワイプ機能の初期化を追加
 
             updateDateDisplay();
             loadDots();
@@ -531,25 +501,76 @@
             if (!localStorage.getItem('tilt_display_presets')) {
                 localStorage.setItem('tilt_display_presets', JSON.stringify(DEFAULT_PRESETS));
             }
-            
             let presets = JSON.parse(localStorage.getItem('tilt_display_presets'));
             if(presets && presets.length > 0) applyPreset(presets[0]);
-            
             updatePreview();
         };
 
-        // --- 画面遷移 ---
+        // --- ★ 新機能：下にスワイプで閉じる処理 ---
+        function setupSwipeToClose() {
+            const controls = document.getElementById('display-controls');
+            let startY = 0;
+            let isDragging = false;
+
+            controls.addEventListener('touchstart', (e) => {
+                // スクロール位置が一番上のときだけドラッグ開始
+                if (controls.scrollTop <= 0) {
+                    startY = e.touches[0].clientY;
+                    isDragging = true;
+                } else {
+                    isDragging = false;
+                }
+            }, {passive: true});
+
+            controls.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+
+                // 下方向に引っ張っているときのみ処理
+                if (deltaY > 0) {
+                    // スクロールを無効化してドラッグさせる
+                    if(e.cancelable) e.preventDefault(); 
+                    
+                    // アニメーションをオフにして指に追従させる
+                    controls.style.transition = 'none';
+                    controls.style.transform = `translateY(${deltaY}px)`;
+                }
+            }, {passive: false});
+
+            controls.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                // アニメーションをオンに戻す
+                controls.style.transition = '';
+                
+                // 現在の移動量を取得（transformから解析）
+                const style = window.getComputedStyle(controls);
+                const matrix = new WebKitCSSMatrix(style.transform);
+                const currentTranslateY = matrix.m42; // Y軸の移動量
+
+                // 120px以上引っ張ったら閉じる
+                if (currentTranslateY > 120) {
+                    controls.classList.remove('show'); // 閉じる
+                    // 次回開くときのためにスタイルをクリア
+                    setTimeout(() => controls.style.transform = '', 300);
+                } else {
+                    // 元に戻る（バネのように）
+                    controls.style.transform = '';
+                }
+            });
+        }
+
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
-            
             if(screenId === 'home-screen') { loadDots(); returnToDisplay = false; }
             if(screenId === 'history-screen') initHistoryScreen();
             if(screenId === 'settings-screen') renderSettingsAll();
             if(screenId === 'display-screen') renderDisplayPresets();
         }
 
-        // --- 設定画面遷移 ---
         function goToSettingsFromDisplay() {
             returnToDisplay = true;
             showScreen('settings-screen');
@@ -565,11 +586,8 @@
             }
         }
 
-        // --- 設定画面機能 ---
         function renderSettingsAll() {
-            renderSettingsList(); 
-            renderSettingsPresets();
-            
+            renderSettingsList(); renderSettingsPresets();
             const backBtn = document.getElementById('settings-back-btn');
             if(returnToDisplay) {
                 backBtn.innerText = "← プレイ画面に戻る";
@@ -584,7 +602,6 @@
             const list = document.getElementById('settings-preset-list');
             list.innerHTML = '';
             let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
-            
             presets.forEach((p, index) => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
@@ -605,11 +622,8 @@
             const bg = document.getElementById('new-preset-bg').value;
             const color = document.getElementById('new-preset-color').value;
             const size = document.getElementById('new-preset-size').value;
-            
             const box = document.getElementById('preview-box');
-            box.innerText = text;
-            box.style.backgroundColor = bg;
-            box.style.color = color;
+            box.innerText = text; box.style.backgroundColor = bg; box.style.color = color;
             document.getElementById('size-preview-val').innerText = size;
         }
 
@@ -618,13 +632,10 @@
             const bg = document.getElementById('new-preset-bg').value;
             const color = document.getElementById('new-preset-color').value;
             const size = document.getElementById('new-preset-size').value;
-            
             if(!text) { alert("文字を入力してください"); return; }
-            
             let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
             presets.push({ text: text, bg: bg, color: color, size: size });
             localStorage.setItem('tilt_display_presets', JSON.stringify(presets));
-            
             document.getElementById('new-preset-text').value = "";
             renderSettingsPresets();
         }
@@ -642,15 +653,11 @@
             const list = document.getElementById('display-preset-list');
             list.innerHTML = '';
             let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
-            
             presets.forEach(p => {
                 const div = document.createElement('div');
                 div.className = 'preset-item';
                 div.onclick = () => applyPreset(p);
-                div.innerHTML = `
-                    <div class="color-dot" style="background:${p.bg};"></div>
-                    ${p.text.replace(/\n/g, ' ').substring(0, 10)}
-                `;
+                div.innerHTML = `<div class="color-dot" style="background:${p.bg};"></div>${p.text.replace(/\n/g, ' ').substring(0, 10)}`;
                 list.appendChild(div);
             });
         }
@@ -658,12 +665,8 @@
         function applyPreset(preset) {
             const area = document.getElementById('display-text-area');
             const screen = document.getElementById('display-screen');
-            
-            area.innerText = preset.text;
-            area.style.color = preset.color;
-            screen.style.backgroundColor = preset.bg;
-            const size = preset.size || 15;
-            area.style.fontSize = size + "vmin";
+            area.innerText = preset.text; area.style.color = preset.color; screen.style.backgroundColor = preset.bg;
+            const size = preset.size || 15; area.style.fontSize = size + "vmin";
         }
 
         function renderSettingsList() {
@@ -1004,14 +1007,12 @@
             reader.onload = function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    
                     if(data.records) localStorage.setItem('tilt_records', JSON.stringify(data.records));
                     if(data.reasons) localStorage.setItem('tilt_reasons_list', JSON.stringify(data.reasons));
                     if(data.presets) localStorage.setItem('tilt_display_presets', JSON.stringify(data.presets));
                     if(data.games) localStorage.setItem('tilt_user_games', JSON.stringify(data.games));
                     if(data.calmLabel) localStorage.setItem('tilt_label_calm', data.calmLabel);
                     if(data.tiltLabel) localStorage.setItem('tilt_label_tilt', data.tiltLabel);
-                    
                     alert('復元が完了しました！\nアプリを再読み込みします。');
                     location.reload();
                 } catch(err) {
@@ -1020,6 +1021,24 @@
                 }
             };
             reader.readAsText(file);
+        }
+
+        // --- ★ 新機能：全画面モード切り替え（JS） ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                } else {
+                    // iPhone/iPad用のアナウンス
+                    alert("iPhoneの場合、Safariのメニュー（共有ボタン）から\n「ホーム画面に追加」\nをすると、完全な全画面アプリとして使えます！");
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
         }
     </script>
 </body>
