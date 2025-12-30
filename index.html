@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ガチで勝ちに行く</title>
+    <style>
+        /* --- デザイン定義 (カラーパレット) --- */
+        :root {
+            --bg-color: #F9F8F4;       /* 生成り（クリーム色） */
+            --text-main: #464646;      /* ダークグレー */
+            --text-sub: #888888;       /* 薄いグレー */
+            --card-bg: #FFFFFF;        /* カード背景（白） */
+            --border-color: #E6E4DD;   /* 薄い境界線 */
+            
+            /* アクセントカラー */
+            --color-green: #7A9D54;    /* 抹茶 */
+            --color-red: #C75B5B;      /* テラコッタ */
+            --color-blue: #6A8caf;     /* ブルー */
+            --color-dark: #2D2D2D;     /* 黒 */
+            
+            --radius: 16px;
+            --shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        /* --- 基本スタイル --- */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Yu Gothic", sans-serif;
+            margin: 0; padding: 0;
+            background-color: var(--bg-color); color: var(--text-main);
+            height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; -webkit-font-smoothing: antialiased;
+        }
+
+        /* 画面レイアウト */
+        .screen {
+            display: none; flex: 1; flex-direction: column;
+            padding: 24px; overflow-y: auto; position: relative;
+        }
+        .screen.active { display: flex; }
+
+        h1, h2 { text-align: center; margin: 10px 0 20px 0; font-size: 1.2rem; font-weight: 700; letter-spacing: 0.05em; }
+
+        /* --- 起動画面（スプラッシュ） --- */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #FFFFFF;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out; /* ふわっと消えるアニメーション */
+        }
+        #splash-screen.fade-out { opacity: 0; pointer-events: none; }
+        .splash-logo {
+            width: 180px; /* ロゴの大きさ（小さめ） */
+            height: auto;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- 日付ナビ --- */
+        .date-nav-container { display: flex; justify-content: center; align-items: center; margin-bottom: 24px; gap: 20px; }
+        .date-nav-btn {
+            background: transparent; border: 1px solid var(--border-color); color: var(--text-main);
+            width: 40px; height: 40px; border-radius: 50%; font-size: 1.2em; cursor: pointer;
+            padding: 0; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; box-shadow: var(--shadow);
+        }
+        .date-nav-btn:active { transform: scale(0.95); background: #eee; }
+        .date-display-wrapper { position: relative; text-align: center; }
+        .date-text { font-size: 1.8em; font-weight: 800; letter-spacing: 0.05em; color: var(--color-dark); cursor: pointer; }
+        .date-sub { font-size: 0.75em; color: var(--text-sub); margin-top: 4px; }
+        #date-picker { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        /* --- ボタン --- */
+        button {
+            border: none; padding: 16px; font-size: 16px; border-radius: var(--radius);
+            margin: 6px 0; cursor: pointer; font-weight: 700; width: 100%;
+            touch-action: manipulation; transition: transform 0.1s, opacity 0.2s;
+            box-shadow: var(--shadow); color: #fff;
+        }
+        button:active { opacity: 0.9; transform: scale(0.98); }
+        .big-btn { background: var(--color-dark); font-size: 1.4em; padding: 24px; letter-spacing: 0.1em; }
+        .btn-outline { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-green { background-color: var(--color-green); }
+        .btn-red { background-color: var(--color-red); }
+        .btn-blue { background-color: var(--color-blue); }
+        .btn-small-nav {
+            font-size: 0.8em; padding: 8px 16px; width: auto; background: transparent;
+            color: var(--text-sub); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: none;
+        }
+
+        /* --- ドット表示 --- */
+        .label-text { text-align: center; font-size: 0.8em; color: var(--text-sub); margin-bottom: 8px; letter-spacing: 0.1em; }
+        .dot-container {
+            display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 30px;
+            background: var(--card-bg); padding: 20px; border-radius: var(--radius);
+            min-height: 60px; align-items: center; box-shadow: var(--shadow); border: 1px solid var(--border-color);
+        }
+        .dot { width: 18px; height: 18px; border-radius: 50%; background-color: #eee; }
+        .dot.green { background-color: var(--color-green); }
+        .dot.red { background-color: var(--color-red); }
+
+        /* --- リスト・設定 --- */
+        .list-container { display: flex; flex-direction: column; gap: 12px; }
+        .list-item {
+            background: var(--card-bg); padding: 18px; border-radius: var(--radius); cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: var(--shadow); border: 1px solid transparent; transition: border 0.2s;
+        }
+        .list-item:active { border-color: var(--text-sub); }
+        .item-text { flex: 1; font-weight: 700; text-align: left; color: var(--text-main); line-height: 1.4; }
+        .delete-btn {
+            background: #fff0f0; color: var(--color-red); width: 32px; height: 32px;
+            border-radius: 50%; font-size: 14px; display: flex; align-items: center; justify-content: center;
+            margin-left: 10px; padding: 0; cursor: pointer; box-shadow: none;
+        }
+        .add-btn-dashed { background: transparent; color: var(--text-sub); border: 2px dashed var(--border-color); box-shadow: none; justify-content: center; }
+
+        /* --- プレイ中ハブ --- */
+        .hub-container { display: flex; flex-direction: column; gap: 20px; justify-content: center; flex: 1; }
+        .hub-title {
+            text-align: center; font-size: 2.4em; margin-bottom: 30px; font-weight: 900;
+            color: var(--color-dark); letter-spacing: 0.05em;
+        }
+
+        /* --- 分析画面 --- */
+        .filter-card {
+            background: var(--card-bg); padding: 20px; border-radius: var(--radius);
+            box-shadow: var(--shadow); margin-bottom: 24px; border: 1px solid var(--border-color);
+        }
+        .filter-row { display: flex; gap: 12px; margin-bottom: 12px; }
+        .filter-row:last-child { margin-bottom: 0; }
+        select, input[type="date"], input[type="text"], textarea {
+            width: 100%; padding: 12px; font-size: 16px; border-radius: 8px;
+            border: 1px solid var(--border-color); background: #fcfcfc;
+            color: var(--text-main); outline: none; box-sizing: border-box; -webkit-appearance: none;
+            font-family: inherit;
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .stats-card {
+            background: var(--card-bg); padding: 20px; margin-bottom: 20px;
+            border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border-color);
+        }
+        .stats-header { font-size: 0.85em; color: var(--text-sub); margin-bottom: 8px; font-weight: 700; }
+        .win-rate-bar-bg { width: 100%; height: 24px; background: #eee; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+        .win-rate-bar-fill { height: 100%; background: var(--color-green); width: 0%; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+        .reason-rank-item { display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding: 12px 0; font-size: 0.95em; }
+        .reason-rank-item:last-child { border-bottom: none; }
+
+        /* --- 画面表示機能 --- */
+        #display-screen { padding: 0; background: #111; transition: background 0.3s; }
+        #display-text-area {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            text-align: center; font-weight: 900; color: #fff;
+            white-space: pre-wrap; cursor: pointer; line-height: 1.2;
+            padding: 20px; user-select: none; letter-spacing: 0.05em;
+        }
+        .controls-overlay {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(255,255,255,0.98); padding: 24px 24px 40px 24px;
+            border-top-left-radius: 20px; border-top-right-radius: 20px;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex; flex-direction: column; gap: 16px; z-index: 100;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        }
+        .controls-overlay.show { transform: translateY(0); }
+        
+        .preset-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .preset-item { 
+            flex: 0 0 auto; padding: 12px 20px; background: #f0f0f0; 
+            border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 0.9em;
+            color: #333; display: flex; align-items: center; gap: 8px; border: 1px solid #ddd;
+        }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
+
+        /* 理由選択ボタン */
+        .reason-btn {
+            display: inline-block; margin: 4px; padding: 10px 16px;
+            border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main);
+            border-radius: 24px; cursor: pointer; transition: all 0.2s; font-weight: bold;
+        }
+        .reason-btn.selected { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+
+        /* 設定画面 */
+        .setting-input-group {
+            margin-bottom: 20px; background: var(--card-bg); padding: 20px;
+            border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: var(--shadow);
+        }
+        .setting-label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9em; }
+
+        /* カラーピッカー・スライダー用 */
+        .color-picker-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+        input[type="color"] {
+            -webkit-appearance: none; border: none; width: 40px; height: 40px; 
+            cursor: pointer; background: none; padding: 0;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #ddd; border-radius: 8px; }
+        
+        input[type="range"] {
+            -webkit-appearance: none; width: 100%; height: 6px; background: #ddd;
+            border-radius: 3px; outline: none; margin-top: 10px; border: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 24px; height: 24px; background: var(--color-dark);
+            border-radius: 50%; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* ポップアップ（文字だけフワッと出るスタイル） */
+        #nice-popup {
+            position: fixed; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            
+            /* 背景・枠を削除 */
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            
+            /* 文字のデザイン */
+            color: var(--color-green);
+            font-size: 4rem; /* 文字を大きく */
+            font-weight: 900;
+            font-style: italic; /* 勢いをつける */
+            white-space: nowrap;
+            
+            /* 文字の縁取り（白）をつけて読みやすく */
+            text-shadow: 
+                3px 3px 0 #fff, -3px -3px 0 #fff,
+                3px -3px 0 #fff, -3px 3px 0 #fff,
+                0 5px 15px rgba(0,0,0,0.1);
+
+            pointer-events: none; 
+            z-index: 9999;
+            opacity: 0; /* 普段は消しておく */
+        }
+
+        /* アニメーションの定義（その場でふわっと） */
+        @keyframes popUpSoft {
+            0% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(0.8); /* 少し小さい状態から */
+            }
+            20% { 
+                opacity: 1; 
+                transform: translate(-50%, -50%) scale(1.0); /* パッと現れる */
+            }
+            100% { 
+                opacity: 0; 
+                transform: translate(-50%, -50%) scale(1.2); /* 上には動かず、少し拡大しながら消える */
+            }
+        }
+
+        #nice-popup.pop { 
+            /* 時間を少しゆっくり(1秒)にして余韻を残す */
+            animation: popUpSoft 1.0s ease-out forwards; 
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <img src="logo.png" alt="LOGO" class="splash-logo">
+    </div>
+
+    <div id="home-screen" class="screen active">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <button class="btn-small-nav" onclick="showScreen('settings-screen')">⚙️ 設定</button>
+            <div style="font-weight:900; letter-spacing:0.1em; color:var(--text-main);">MENTAL CHECKER</div>
+            <div style="width:60px;"></div>
+        </div>
+
+        <div class="date-nav-container">
+            <button class="date-nav-btn" onclick="changeDate(-1)">❮</button>
+            <div class="date-display-wrapper">
+                <div class="date-text" id="current-date-text">--/--</div>
+                <div class="date-sub">タップでカレンダー</div>
+                <input type="date" id="date-picker" onchange="onDatePick(event)">
+            </div>
+            <button class="date-nav-btn" onclick="changeDate(1)">❯</button>
+        </div>
+
+        <div class="label-text">MENTAL LOG</div>
+        <div class="dot-container" id="dot-display"></div>
+        
+        <div style="margin-top:auto; display:grid; gap:16px;">
+            <button class="big-btn" onclick="showGameSelect()">PLAY START</button>
+            <button class="btn-outline" onclick="showScreen('history-screen')">分析と記録</button>
+        </div>
+    </div>
+
+    <div id="settings-screen" class="screen">
+        <h2>アプリ設定</h2>
+        
+        <button id="settings-back-btn" class="btn-outline" style="margin-bottom:20px;" onclick="returnFromSettings()">← 戻る</button>
+
+        <div style="margin-bottom:30px;">
+            <h3 style="font-size:1em; color:var(--text-sub); margin-bottom:12px;">ボタンの言葉</h3>
+            <div class="setting-input-group" style="border-left: 6px solid var(--color-green);">
+                <label class="setting-label">成功ボタン（緑）</label>
+                <input type="text" id="setting-calm-text" class="setting-input" placeholder="例: 落ち着いてた">
+            </div>
+            <div class="setting-input-group" style="border-left: 6px solid var(--color-red);">
+                <label class="setting-label">失敗ボタン（赤）</label>
+                <input type="text" id="setting-tilt-text" class="setting-input" placeholder="例: ティルトした">
+            </div>
+            <button class="btn-outline" onclick="saveButtonSettings()">言葉を保存</button>
+        </div>
+
+        <div style="margin-bottom:30px;">
+            <h3 style="font-size:1em; color:var(--text-sub); margin-bottom:12px;">画面表示プリセットの編集</h3>
+            <div class="setting-input-group">
+                <label class="setting-label">新しいプリセットを追加</label>
+                <textarea id="new-preset-text" placeholder="表示させたい言葉（改行OK）"></textarea>
+                
+                <div class="color-picker-row">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="font-size:0.8em;">背景:</label>
+                        <input type="color" id="new-preset-bg" value="#000000" oninput="updatePreview()">
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="font-size:0.8em;">文字:</label>
+                        <input type="color" id="new-preset-color" value="#ffffff" oninput="updatePreview()">
+                    </div>
+                </div>
+                
+                <div style="margin-top:15px;">
+                    <label style="font-size:0.8em;">文字サイズ: <span id="size-preview-val">15</span>% (vmin)</label>
+                    <input type="range" id="new-preset-size" min="5" max="50" value="15" oninput="updatePreview()">
+                </div>
+
+                <div id="preview-box" style="margin-top:15px; padding:20px; text-align:center; font-weight:900; background:#000; color:#fff; border-radius:8px; border:1px solid #ccc;">
+                    プレビュー
+                </div>
+
+                <button class="big-btn" style="margin-top:15px; font-size:1em; padding:12px;" onclick="addNewPreset()">追加する</button>
+            </div>
+            
+            <label style="font-size:0.8em; color:var(--text-sub); display:block; margin-bottom:10px;">登録済みプリセット</label>
+            <div id="settings-preset-list" class="list-container"></div>
+        </div>
+
+        <div style="margin-bottom:30px;">
+            <h3 style="font-size:1em; color:var(--text-sub); margin-bottom:12px;">失敗の原因リスト</h3>
+            <div id="settings-reason-list" class="list-container"></div>
+            <button class="btn-outline" style="margin-top:10px; border-style:dashed;" onclick="addNewReason()">＋ 原因を追加</button>
+        </div>
+
+        <div style="margin-bottom:30px; border-top:1px solid var(--border-color); padding-top:20px;">
+            <h3 style="font-size:1em; color:var(--text-sub); margin-bottom:12px;">データのバックアップ</h3>
+            <div style="font-size:0.8em; color:var(--text-sub); margin-bottom:10px;">
+                機種変更の時や、定期的なバックアップに。
+            </div>
+            <button class="btn-outline" onclick="exportDataFile()">📤 データをファイルに保存</button>
+            <div style="height:10px;"></div>
+            <button class="btn-outline" onclick="triggerImport()" style="background:#fff4f4; border-color:#edd;">📥 ファイルから復元</button>
+            <input type="file" id="import-file-input" style="display:none;" onchange="importDataFile(this)">
+        </div>
+        
+    </div>
+
+    <div id="game-select-screen" class="screen">
+        <h2>競技を選択</h2>
+        <div style="text-align:center; font-size:0.8em; color:var(--text-sub); margin-bottom:20px;">プレイする競技を選んでください</div>
+        <div id="game-list-container" class="list-container"></div>
+        <button class="btn-outline" style="margin-top:20px;" onclick="showScreen('home-screen')">戻る</button>
+    </div>
+
+    <div id="play-hub-screen" class="screen">
+        <div class="hub-container">
+            <div style="text-align:center;">
+                <div style="font-size:0.9em; color:var(--text-sub); margin-bottom:10px;">NOW PLAYING</div>
+                <div id="current-game-title" class="hub-title" style="margin-bottom:15px;">GAME</div>
+                
+                <div id="session-stats-box" style="background:#fff; padding:15px; border-radius:12px; box-shadow:var(--shadow); margin-bottom:20px; border:1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
+                        <span style="font-size:0.8em; color:var(--text-sub); font-weight:bold;">今日のメンタル勝率</span>
+                        <span id="session-rate-text" style="font-size:1.2em; font-weight:900; color:var(--text-main);">--%</span>
+                    </div>
+                    <div style="width:100%; height:12px; background:#eee; border-radius:6px; overflow:hidden;">
+                        <div id="session-rate-bar" style="width:0%; height:100%; background:var(--color-green); transition:width 0.5s;"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:0.8em; color:var(--text-sub);">
+                        <span>🟢 <span id="session-calm-val">0</span></span>
+                        <span>🔴 <span id="session-tilt-val">0</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="play-calm-btn" class="btn-green" style="height:80px;" onclick="recordCalm()">落ち着いてた</button>
+            <button id="play-tilt-btn" class="btn-red" style="height:80px;" onclick="goToTiltReason()">ティルトした</button>
+            
+            <button class="btn-blue" style="height:80px; margin-top:10px;" onclick="goToDisplayMode()">画面に文字を表示</button>
+        </div>
+        <button class="btn-outline" onclick="showScreen('home-screen')">終了してホームへ</button>
+    </div>
+
+    <div id="tilt-reason-screen" class="screen">
+        <h2>ティルトした理由</h2>
+        <div style="text-align:center; font-size:0.9em; color:var(--text-sub); margin-bottom:20px;">今の気持ちに近いものを選択</div>
+        <div id="reasons-container" style="text-align:center; padding:10px 0;"></div>
+        <input type="text" id="custom-reason" placeholder="その他（自由入力）" style="width:100%; padding:16px; margin-top:20px;">
+        <div style="margin-top:auto;">
+            <button class="big-btn" onclick="recordTiltData()">保存する</button>
+            <button class="btn-outline" onclick="cancelTiltReason()">キャンセル</button>
+        </div>
+    </div>
+
+    <div id="display-screen" class="screen">
+        <div id="display-text-area" onclick="toggleControls()">
+            ガチで<br>勝ちに行く
+        </div>
+        <div id="display-controls" class="controls-overlay">
+            
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button id="overlay-calm-btn" class="btn-green" style="flex:1; padding:20px 10px; font-size:1em; margin:0;" onclick="recordCalm()">落ち着いてた</button>
+                <button id="overlay-tilt-btn" class="btn-red" style="flex:1; padding:20px 10px; font-size:1em; margin:0;" onclick="goToTiltReason(true)">ティルト</button>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label style="font-weight:bold; color:#555;">プリセット</label>
+                <span id="wake-lock-status" style="font-size:11px; color:#888; background:#eee; padding:4px 8px; border-radius:4px;">💡 常時点灯OFF</span>
+            </div>
+            
+            <div id="display-preset-list" class="preset-list"></div>
+            
+            <button class="btn-outline" style="margin-top:10px;" onclick="goToSettingsFromDisplay()">⚙️ プリセット設定・編集</button>
+            
+            <button onclick="exitDisplayMode()" class="btn-outline" style="margin-top:10px; border:none; background:#eee;">プレイ画面に戻る</button>
+        </div>
+    </div>
+
+    <div id="history-screen" class="screen">
+        <h2>分析と記録</h2>
+        
+        <div class="filter-card">
+            <div class="filter-row">
+                <div style="flex:1;">
+                    <label style="font-size:0.75em; font-weight:bold; display:block; margin-bottom:6px; color:var(--text-sub);">期間</label>
+                    <select id="history-period" onchange="onHistoryPeriodChange()">
+                        <option value="ALL">全期間</option>
+                        <option value="DATE">日付指定</option>
+                    </select>
+                </div>
+                <div style="flex:1; display:none;" id="history-date-wrapper">
+                    <label style="font-size:0.75em; font-weight:bold; display:block; margin-bottom:6px; color:var(--text-sub);">日付</label>
+                    <input type="date" id="history-date-picker" onchange="renderHistoryWithFilter()">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:0.75em; font-weight:bold; display:block; margin-bottom:6px; color:var(--text-sub);">競技</label>
+                <select id="history-filter" onchange="renderHistoryWithFilter()">
+                    <option value="ALL">すべて</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="stats-container">
+            <div class="stats-card">
+                <div class="stats-header">メンタル勝率</div>
+                <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                    <div style="font-size:3em; font-weight:900; color:var(--color-dark);" id="stats-rate">--%</div>
+                    <div style="font-size:0.9em; color:var(--text-sub);"><span id="stats-calm-count">0</span> / <span id="stats-total-count">0</span> 試合</div>
+                </div>
+                <div class="win-rate-bar-bg"><div class="win-rate-bar-fill" id="stats-rate-bar"></div></div>
+            </div>
+            <div class="stats-card">
+                <div class="stats-header">失敗の原因 TOP3</div>
+                <div id="stats-reasons-list"><div style="color:var(--text-sub); text-align:center; padding:10px;">データなし</div></div>
+            </div>
+        </div>
+        
+        <h3 style="font-size:1em; color:var(--text-sub); margin:30px 0 10px 0;">記録一覧</h3>
+        <div id="history-list"></div>
+        <button onclick="showScreen('home-screen')" class="btn-outline" style="margin-top:20px;">戻る</button>
+        <button onclick="clearData()" style="background:transparent; color:#999; font-size:12px; margin-top:40px; border:none; box-shadow:none; text-decoration:underline;">全データをリセット</button>
+    </div>
+
+    <div id="nice-popup">NICE!</div>
+
+    <script>
+        // --- データ初期値 ---
+        const DEFAULT_REASONS = ["焦った", "他人の目を気にした", "目先の利益に囚われた", "感情的になった"];
+        
+        const DEFAULT_PRESETS = [
+            { text: "ガチで\n勝ちに行く", bg: "#111111", color: "#ffffff", size: "15" },
+            { text: "落ち着く", bg: "#7A9D54", color: "#ffffff", size: "15" },
+            { text: "深呼吸する", bg: "#6A8caf", color: "#ffffff", size: "15" }
+        ];
+
+        let activeGame = "";
+        let selectedReasons = [];
+        let wakeLock = null;
+        let calmLabel = "落ち着いてた";
+        let tiltLabel = "落ち着けなかった";
+        
+        let viewDate = new Date();
+        
+        let isFromDisplayMode = false;
+        let returnToDisplay = false;
+
+        window.onload = function() {
+            // ▼ ロゴの表示（スプラッシュ画面）処理 ▼
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.classList.add('fade-out');
+                setTimeout(() => splash.style.display = 'none', 500); // 0.5秒後に完全非表示
+            }, 1500); // 1.5秒間表示する
+
+            updateDateDisplay();
+            loadDots();
+            loadSettings();
+            
+            if (!localStorage.getItem('tilt_reasons_list')) {
+                localStorage.setItem('tilt_reasons_list', JSON.stringify(DEFAULT_REASONS));
+            }
+            if (!localStorage.getItem('tilt_display_presets')) {
+                localStorage.setItem('tilt_display_presets', JSON.stringify(DEFAULT_PRESETS));
+            }
+            
+            let presets = JSON.parse(localStorage.getItem('tilt_display_presets'));
+            if(presets && presets.length > 0) applyPreset(presets[0]);
+            
+            updatePreview();
+        };
+
+        // --- 画面遷移 ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            
+            if(screenId === 'home-screen') { loadDots(); returnToDisplay = false; }
+            if(screenId === 'history-screen') initHistoryScreen();
+            if(screenId === 'settings-screen') renderSettingsAll();
+            if(screenId === 'display-screen') renderDisplayPresets();
+        }
+
+        // --- 設定画面遷移 ---
+        function goToSettingsFromDisplay() {
+            returnToDisplay = true;
+            showScreen('settings-screen');
+        }
+
+        function returnFromSettings() {
+            if(returnToDisplay) {
+                showScreen('display-screen');
+                requestWakeLock();
+                returnToDisplay = false;
+            } else {
+                showScreen('home-screen');
+            }
+        }
+
+        // --- 設定画面機能 ---
+        function renderSettingsAll() {
+            renderSettingsList(); 
+            renderSettingsPresets();
+            
+            const backBtn = document.getElementById('settings-back-btn');
+            if(returnToDisplay) {
+                backBtn.innerText = "← プレイ画面に戻る";
+                backBtn.style.background = "#eef";
+            } else {
+                backBtn.innerText = "← ホームに戻る";
+                backBtn.style.background = "var(--card-bg)";
+            }
+        }
+
+        function renderSettingsPresets() {
+            const list = document.getElementById('settings-preset-list');
+            list.innerHTML = '';
+            let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
+            
+            presets.forEach((p, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div class="color-dot" style="background:${p.bg};"></div>
+                        <span class="item-text" style="white-space:pre-wrap; font-size:0.9em;">${p.text}</span>
+                        <span style="font-size:0.8em; color:#888;">サイズ:${p.size || 15}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deletePreset(${index})">✕</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function updatePreview() {
+            const text = document.getElementById('new-preset-text').value || "プレビュー";
+            const bg = document.getElementById('new-preset-bg').value;
+            const color = document.getElementById('new-preset-color').value;
+            const size = document.getElementById('new-preset-size').value;
+            
+            const box = document.getElementById('preview-box');
+            box.innerText = text;
+            box.style.backgroundColor = bg;
+            box.style.color = color;
+            document.getElementById('size-preview-val').innerText = size;
+        }
+
+        function addNewPreset() {
+            const text = document.getElementById('new-preset-text').value;
+            const bg = document.getElementById('new-preset-bg').value;
+            const color = document.getElementById('new-preset-color').value;
+            const size = document.getElementById('new-preset-size').value;
+            
+            if(!text) { alert("文字を入力してください"); return; }
+            
+            let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
+            presets.push({ text: text, bg: bg, color: color, size: size });
+            localStorage.setItem('tilt_display_presets', JSON.stringify(presets));
+            
+            document.getElementById('new-preset-text').value = "";
+            renderSettingsPresets();
+        }
+
+        function deletePreset(index) {
+            if(confirm('削除しますか？')) {
+                let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
+                presets.splice(index, 1);
+                localStorage.setItem('tilt_display_presets', JSON.stringify(presets));
+                renderSettingsPresets();
+            }
+        }
+
+        function renderDisplayPresets() {
+            const list = document.getElementById('display-preset-list');
+            list.innerHTML = '';
+            let presets = JSON.parse(localStorage.getItem('tilt_display_presets') || '[]');
+            
+            presets.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'preset-item';
+                div.onclick = () => applyPreset(p);
+                div.innerHTML = `
+                    <div class="color-dot" style="background:${p.bg};"></div>
+                    ${p.text.replace(/\n/g, ' ').substring(0, 10)}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function applyPreset(preset) {
+            const area = document.getElementById('display-text-area');
+            const screen = document.getElementById('display-screen');
+            
+            area.innerText = preset.text;
+            area.style.color = preset.color;
+            screen.style.backgroundColor = preset.bg;
+            const size = preset.size || 15;
+            area.style.fontSize = size + "vmin";
+        }
+
+        function renderSettingsList() {
+            const list = document.getElementById('settings-reason-list');
+            list.innerHTML = '';
+            let reasons = JSON.parse(localStorage.getItem('tilt_reasons_list') || '[]');
+            reasons.forEach((reason, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span class="item-text">${reason}</span><button class="delete-btn" onclick="deleteReason(${index})">✕</button>`;
+                list.appendChild(div);
+            });
+        }
+        function addNewReason() {
+            const name = prompt("新しい原因を入力してください");
+            if(name) {
+                let reasons = JSON.parse(localStorage.getItem('tilt_reasons_list') || '[]');
+                reasons.push(name);
+                localStorage.setItem('tilt_reasons_list', JSON.stringify(reasons));
+                renderSettingsList();
+            }
+        }
+        function deleteReason(index) {
+            if(confirm('リストから削除しますか？')) {
+                let reasons = JSON.parse(localStorage.getItem('tilt_reasons_list') || '[]');
+                reasons.splice(index, 1);
+                localStorage.setItem('tilt_reasons_list', JSON.stringify(reasons));
+                renderSettingsList();
+            }
+        }
+
+        function changeDate(offset) { viewDate.setDate(viewDate.getDate() + offset); updateDateDisplay(); loadDots(); }
+        function updateDateDisplay() {
+            const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+            const str = `${viewDate.getMonth()+1}/${viewDate.getDate()} (${days[viewDate.getDay()]})`;
+            document.getElementById('current-date-text').innerText = str;
+            const y = viewDate.getFullYear(); const m = String(viewDate.getMonth() + 1).padStart(2, '0'); const d = String(viewDate.getDate()).padStart(2, '0');
+            document.getElementById('date-picker').value = `${y}-${m}-${d}`;
+        }
+        function onDatePick(e) { if(e.target.value) { viewDate = new Date(e.target.value); updateDateDisplay(); loadDots(); } }
+
+        function loadSettings() {
+            calmLabel = localStorage.getItem('tilt_label_calm') || "落ち着いてた";
+            tiltLabel = localStorage.getItem('tilt_label_tilt') || "落ち着けなかった";
+            document.getElementById('setting-calm-text').value = calmLabel;
+            document.getElementById('setting-tilt-text').value = tiltLabel;
+            updatePlayButtons();
+        }
+        function saveButtonSettings() {
+            const newCalm = document.getElementById('setting-calm-text').value;
+            const newTilt = document.getElementById('setting-tilt-text').value;
+            if(newCalm) { calmLabel = newCalm; localStorage.setItem('tilt_label_calm', calmLabel); }
+            if(newTilt) { tiltLabel = newTilt; localStorage.setItem('tilt_label_tilt', tiltLabel); }
+            alert('言葉を保存しました');
+            updatePlayButtons();
+        }
+        function updatePlayButtons() {
+            document.getElementById('play-calm-btn').innerText = calmLabel;
+            document.getElementById('play-tilt-btn').innerText = tiltLabel;
+            document.getElementById('overlay-calm-btn').innerText = calmLabel;
+            document.getElementById('overlay-tilt-btn').innerText = tiltLabel;
+        }
+
+        function showGameSelect() {
+            const list = document.getElementById('game-list-container');
+            list.innerHTML = '';
+            let games = JSON.parse(localStorage.getItem('tilt_user_games') || '[]');
+            games.forEach((game, index) => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span class="item-text" onclick="startGame('${game}')">${game}</span><button class="delete-btn" onclick="deleteGame(${index})">✕</button>`;
+                list.appendChild(div);
+            });
+            const addBtn = document.createElement('div');
+            addBtn.className = 'list-item add-btn-dashed';
+            addBtn.innerText = '＋ 競技を追加';
+            addBtn.onclick = addNewGame;
+            list.appendChild(addBtn);
+            showScreen('game-select-screen');
+        }
+        function addNewGame() {
+            const name = prompt("競技名を入力");
+            if(name) {
+                let games = JSON.parse(localStorage.getItem('tilt_user_games') || '[]');
+                games.push(name);
+                localStorage.setItem('tilt_user_games', JSON.stringify(games));
+                showGameSelect();
+            }
+        }
+        function deleteGame(index) {
+            if(confirm('削除しますか？')) {
+                let games = JSON.parse(localStorage.getItem('tilt_user_games') || '[]');
+                games.splice(index, 1);
+                localStorage.setItem('tilt_user_games', JSON.stringify(games));
+                showGameSelect();
+            }
+        }
+        function startGame(gameName) {
+            activeGame = gameName;
+            document.getElementById('current-game-title').innerText = gameName;
+            updateSessionStats();
+            showScreen('play-hub-screen');
+        }
+
+        function goToDisplayMode() { 
+            showScreen('display-screen'); 
+            requestWakeLock(); 
+            isFromDisplayMode = false;
+        }
+        function exitDisplayMode() { 
+            releaseWakeLock(); 
+            showScreen('play-hub-screen'); 
+        }
+
+        function recordCalm() {
+            if(confirm(`「${calmLabel}」として記録しますか？`)) {
+                saveData('calm', [], calmLabel);
+                const popup = document.getElementById('nice-popup');
+                popup.classList.add('pop');
+                setTimeout(() => popup.classList.remove('pop'), 1500);
+            }
+        }
+
+        function goToTiltReason(fromDisplay = false) {
+            isFromDisplayMode = fromDisplay;
+            selectedReasons = [];
+            const container = document.getElementById('reasons-container');
+            container.innerHTML = '';
+            let currentReasons = JSON.parse(localStorage.getItem('tilt_reasons_list') || '[]');
+            currentReasons.forEach(r => {
+                const btn = document.createElement('span');
+                btn.className = 'reason-btn';
+                btn.innerText = r;
+                btn.onclick = () => {
+                    if(selectedReasons.includes(r)) {
+                        selectedReasons = selectedReasons.filter(i => i !== r);
+                        btn.classList.remove('selected');
+                    } else {
+                        selectedReasons.push(r);
+                        btn.classList.add('selected');
+                    }
+                };
+                container.appendChild(btn);
+            });
+            document.getElementById('custom-reason').value = '';
+            showScreen('tilt-reason-screen');
+        }
+        
+        function recordTiltData() {
+            const custom = document.getElementById('custom-reason').value;
+            let finalReasons = [...selectedReasons];
+            if(custom) finalReasons.push(custom);
+            saveData('tilt', finalReasons, tiltLabel);
+            returnToPreviousScreen();
+        }
+        function cancelTiltReason() { returnToPreviousScreen(); }
+
+        function returnToPreviousScreen() {
+            if(isFromDisplayMode) {
+                showScreen('display-screen');
+                requestWakeLock();
+                document.getElementById('display-controls').classList.remove('show');
+            } else {
+                showScreen('play-hub-screen');
+            }
+        }
+
+        function saveData(mental, reasons, labelText) {
+            const record = { date: new Date().toISOString(), game: activeGame, mental: mental, label: labelText, reasons: reasons };
+            let records = JSON.parse(localStorage.getItem('tilt_records') || '[]');
+            records.push(record);
+            localStorage.setItem('tilt_records', JSON.stringify(records));
+            updateSessionStats();
+        }
+
+        function updateSessionStats() {
+            const now = new Date();
+            const todayStr = now.toDateString(); 
+            let records = JSON.parse(localStorage.getItem('tilt_records') || '[]');
+            const sessionRecords = records.filter(r => (new Date(r.date).toDateString() === todayStr) && (r.game === activeGame));
+            const total = sessionRecords.length;
+            const calmCount = sessionRecords.filter(r => r.mental === 'calm').length;
+            const tiltCount = total - calmCount;
+            const rate = total === 0 ? 0 : Math.round((calmCount / total) * 100);
+
+            document.getElementById('session-rate-text').innerText = rate + "%";
+            document.getElementById('session-calm-val').innerText = calmCount;
+            document.getElementById('session-tilt-val').innerText = tiltCount;
+            const bar = document.getElementById('session-rate-bar');
+            bar.style.width = rate + "%";
+            
+            if(rate < 50 && total > 0) {
+                bar.style.backgroundColor = "var(--color-red)";
+                document.getElementById('session-rate-text').style.color = "var(--color-red)";
+            } else {
+                bar.style.backgroundColor = "var(--color-green)";
+                document.getElementById('session-rate-text').style.color = "var(--color-dark)";
+            }
+        }
+
+        async function requestWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); document.getElementById('wake-lock-status').innerText = "💡 常時点灯ON"; wakeLock.addEventListener('release', () => { document.getElementById('wake-lock-status').innerText = "💡 常時点灯OFF"; }); } } catch (err) {} }
+        async function releaseWakeLock() { if (wakeLock !== null) { await wakeLock.release(); wakeLock = null; } }
+
+        function loadDots() {
+            const container = document.getElementById('dot-display');
+            let records = JSON.parse(localStorage.getItem('tilt_records') || '[]');
+            const targetDateStr = viewDate.toDateString();
+            const targetRecords = records.filter(r => new Date(r.date).toDateString() === targetDateStr);
+            container.innerHTML = targetRecords.length ? '' : '<div style="color:#aaa; font-size:0.8em;">NO DATA</div>';
+            targetRecords.forEach(r => {
+                const dot = document.createElement('div');
+                dot.className = `dot ${r.mental === 'calm' ? 'green' : 'red'}`;
+                container.appendChild(dot);
+            });
+        }
+
+        function toggleControls() { document.getElementById('display-controls').classList.toggle('show'); }
+        function clearData() { if(confirm('全データを消去しますか？')) { localStorage.clear(); location.reload(); } }
+
+        function initHistoryScreen() {
+            const now = new Date();
+            const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0');
+            document.getElementById('history-date-picker').value = `${y}-${m}-${d}`;
+            document.getElementById('history-period').value = "ALL";
+            onHistoryPeriodChange();
+            
+            const filterSelect = document.getElementById('history-filter');
+            filterSelect.innerHTML = '<option value="ALL">すべて</option>';
+            let userGames = JSON.parse(localStorage.getItem('tilt_user_games') || '[]');
+            let records = JSON.parse(localStorage.getItem('tilt_records') || '[]');
+            let recordGames = [...new Set(records.map(r => r.game))];
+            let allGameOptions = [...new Set([...userGames, ...recordGames])];
+            allGameOptions.forEach(game => { if(!game) return; const o = document.createElement('option'); o.value = game; o.innerText = game; filterSelect.appendChild(o); });
+            renderHistoryWithFilter();
+        }
+
+        function onHistoryPeriodChange() {
+            const period = document.getElementById('history-period').value;
+            document.getElementById('history-date-wrapper').style.display = (period === 'DATE') ? 'block' : 'none';
+            renderHistoryWithFilter();
+        }
+
+        function renderHistoryWithFilter() {
+            const periodVal = document.getElementById('history-period').value;
+            const dateVal = document.getElementById('history-date-picker').value;
+            const gameVal = document.getElementById('history-filter').value;
+            let records = JSON.parse(localStorage.getItem('tilt_records') || '[]');
+
+            if(periodVal === 'DATE' && dateVal) {
+                records = records.filter(r => {
+                    const rDate = new Date(r.date);
+                    const rY = rDate.getFullYear(); const rM = String(rDate.getMonth() + 1).padStart(2, '0'); const rD = String(rDate.getDate()).padStart(2, '0');
+                    return `${rY}-${rM}-${rD}` === dateVal;
+                });
+            }
+            if(gameVal !== "ALL") records = records.filter(r => r.game === gameVal);
+
+            const total = records.length;
+            const calmCount = records.filter(r => r.mental === 'calm').length;
+            const calmRate = total === 0 ? 0 : Math.round((calmCount / total) * 100);
+
+            let reasonCounts = {};
+            records.forEach(r => { if(r.mental === 'tilt' && r.reasons) r.reasons.forEach(re => reasonCounts[re] = (reasonCounts[re] || 0) + 1); });
+            let sortedReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+
+            document.getElementById('stats-rate').innerText = `${calmRate}%`;
+            document.getElementById('stats-calm-count').innerText = calmCount;
+            document.getElementById('stats-total-count').innerText = total;
+            document.getElementById('stats-rate-bar').style.width = `${calmRate}%`;
+            document.getElementById('stats-rate-bar').style.backgroundColor = calmRate < 50 ? 'var(--color-red)' : 'var(--color-green)';
+
+            const reasonListDiv = document.getElementById('stats-reasons-list');
+            reasonListDiv.innerHTML = '';
+            if(sortedReasons.length === 0) reasonListDiv.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:5px;">データなし</div>';
+            else sortedReasons.slice(0, 5).forEach((item, index) => {
+                const div = document.createElement('div'); div.className = 'reason-rank-item';
+                div.innerHTML = `<span>${index+1}. ${item[0]}</span><span style="font-weight:bold;">${item[1]}回</span>`;
+                reasonListDiv.appendChild(div);
+            });
+
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            if(records.length === 0) { list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sub);">記録がありません</div>'; return; }
+            records.reverse().forEach(r => {
+                const date = new Date(r.date);
+                const timeStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                let displayLabel = r.label || (r.mental === 'calm' ? "落ち着いてた" : "ティルトした");
+                const div = document.createElement('div'); div.className = 'list-item'; div.style.marginBottom = "10px"; div.style.cursor = "default";
+                div.innerHTML = `
+                    <div style="width:100%;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <strong style="color:var(--text-main);">${r.game}</strong>
+                            <span style="font-size:0.8em; color:var(--text-sub);">${timeStr}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:${r.mental === 'calm' ? 'var(--color-green)' : 'var(--color-red)'}; font-weight:bold;">● ${displayLabel}</span>
+                        </div>
+                        ${r.reasons && r.reasons.length > 0 ? `<div style="font-size:0.85em; color:var(--text-sub); margin-top:6px; background:#f5f5f5; padding:6px; border-radius:4px;">理由: ${r.reasons.join(', ')}</div>` : ''}
+                    </div>`;
+                list.appendChild(div);
+            });
+        }
+
+        function exportDataFile() {
+            const data = {
+                records: JSON.parse(localStorage.getItem('tilt_records') || '[]'),
+                reasons: JSON.parse(localStorage.getItem('tilt_reasons_list') || '[]'),
+                presets: JSON.parse(localStorage.getItem('tilt_display_presets') || '[]'),
+                games: JSON.parse(localStorage.getItem('tilt_user_games') || '[]'),
+                calmLabel: localStorage.getItem('tilt_label_calm'),
+                tiltLabel: localStorage.getItem('tilt_label_tilt')
+            };
+            const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mental_backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert('データファイルを保存しました。\n大切に保管してください。');
+        }
+
+        function triggerImport() {
+            document.getElementById('import-file-input').click();
+        }
+
+        function importDataFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            if(!confirm('現在のデータを上書きして復元しますか？\n（今のデータは消えます）')) {
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if(data.records) localStorage.setItem('tilt_records', JSON.stringify(data.records));
+                    if(data.reasons) localStorage.setItem('tilt_reasons_list', JSON.stringify(data.reasons));
+                    if(data.presets) localStorage.setItem('tilt_display_presets', JSON.stringify(data.presets));
+                    if(data.games) localStorage.setItem('tilt_user_games', JSON.stringify(data.games));
+                    if(data.calmLabel) localStorage.setItem('tilt_label_calm', data.calmLabel);
+                    if(data.tiltLabel) localStorage.setItem('tilt_label_tilt', data.tiltLabel);
+                    
+                    alert('復元が完了しました！\nアプリを再読み込みします。');
+                    location.reload();
+                } catch(err) {
+                    alert('ファイルの読み込みに失敗しました。\n正しいバックアップファイルか確認してください。');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
